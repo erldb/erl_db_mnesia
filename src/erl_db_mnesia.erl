@@ -11,10 +11,10 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0]).
+-export([start_link/1]).
 
 %% gen_server callbacks
--export([init/1, handle_call/3, handle_info/2,
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE).
@@ -32,7 +32,7 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link() ->
+start_link(Args) ->
     WorkerArgs = proplists:get_value(worker_args, Args, []),
     gen_server:start_link({local, ?SERVER}, ?MODULE, WorkerArgs, []).
 
@@ -52,8 +52,13 @@ start_link() ->
 %% @end
 %%--------------------------------------------------------------------
 init(Args) ->
-    ensure_tables(Args),
+    ensure_start(Args),
     {ok, #state{}}.
+
+ensure_start(Args) ->
+    mnesia:create_schema([node()]),
+    application:start(mnesia),
+    ensure_tables(Args).
 
 ensure_tables(Args) ->
     %% Here it should be some checks for tables.
@@ -77,11 +82,14 @@ handle_call({read, Table, Key}, _From, State) ->
     Reply = transaction(read, Table, Key),
     {reply, Reply, State};
 handle_call({write, Table, Object}, _From, State) ->
-    WriteResp = transaction(write, Table, Object)
+    Reply = transaction(write, Table, Object),
     {reply, Reply, State};
 handle_call({delete, Table, Key}, _From, State) ->
     Reply = transaction(delete, Table, Key),
     {reply, Reply, State}.
+
+handle_cast(_, State) ->
+    {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% @private
