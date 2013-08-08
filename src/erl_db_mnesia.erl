@@ -34,7 +34,7 @@
 %%--------------------------------------------------------------------
 start_link(Args) ->
     WorkerArgs = proplists:get_value(worker_args, Args, []),
-    gen_server:start_link({local, ?SERVER}, ?MODULE, WorkerArgs, []).
+    gen_server:start_link(?MODULE, WorkerArgs, []).
 
 %%%===================================================================
 %%% gen_server callbacks
