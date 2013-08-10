@@ -62,6 +62,11 @@ ensure_start(Args) ->
 
 ensure_tables(Args) ->
     %% Here it should be some checks for tables.
+    Models = erl_db:get_models(mnesia),
+    Model = hd(Models),
+    Fields = proplists:get_value(fields, Model:module_info(attributes)),
+    TableFields = [X || {X, _, _} <- Fields],
+    Ok = mnesia:create_table(Model, [{attributes, TableFields}]),
     Args.
 
 %%--------------------------------------------------------------------
@@ -78,15 +83,20 @@ ensure_tables(Args) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({read, Table, Key}, _From, State) ->
-    Reply = transaction(read, Table, Key),
-    {reply, Reply, State};
-handle_call({write, Table, Object}, _From, State) ->
-    Reply = transaction(write, Table, Object),
+handle_call({find, Model, Conditions}, _From, State) ->
+    %% Reply = transaction(read, Table, Key),
+    {reply, Model, State};
+handle_call({save, Object}, _From, State) ->
+    Model = element(1, Object),
+    Reply = transaction(write, Model, Object),
     {reply, Reply, State};
 handle_call({delete, Table, Key}, _From, State) ->
     Reply = transaction(delete, Table, Key),
+    {reply, Reply, State};
+handle_call({read, Model, Key}, _From, State) ->
+    Reply = transaction(read, Model, Key),
     {reply, Reply, State}.
+
 
 handle_cast(_, State) ->
     {noreply, State}.
