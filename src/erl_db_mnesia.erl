@@ -66,7 +66,15 @@ ensure_tables(Args) ->
     Model = hd(Models),
     Fields = proplists:get_value(fields, Model:module_info(attributes)),
     TableFields = [X || {X, _, _} <- Fields],
-    Ok = mnesia:create_table(Model, [{attributes, TableFields}]),
+    DiscCopies =
+        case proplists:get_value(disc_copies, Args, false) of
+            true ->
+                {disc_copies, [node()]};
+            fasle ->
+                {disc_copies, []}
+        end,
+    Attributes = Args -- [{disc_copies, true}] ++ [{attributes, TableFields}],
+    Ok = mnesia:create_table(Model, Attributes),
     Args.
 
 %%--------------------------------------------------------------------
